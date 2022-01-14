@@ -24,13 +24,14 @@ public class TripleTraversalScript : MonoBehaviour
     private static readonly string[][] _walls = new string[3][]
     {
         new string[4]{"YYYYYYYNYNYYNNNNYNYNNYYYNNYYYYYNYNNNNYNYNNNYNNNYN","NYYNNYYNYNNYYYYNNYNNYNNNNYNYNNYNNYYYYNYNYYNNYYYNY","NYNYYNNNNYNYNNYYYNNYYYYYNYNNNNYNYNNNYNNNYNYYYYYYY","YNYYNNYYNYNNYYYYNNYNNYNNNNYNYNNYNNYYYYNYNYYNNYYYN"},
-        new string[4]{"YYYYYYYYYNYYNYNYNNYNNYNYNNYNNNNNNYNNYNNYNYYYNYNNN","NNNYNNYNYYNYYYNNNYNYYYYNNNNYNYYYNYYNYYNYYYNNNYNNY","YYNYYNYNYNNYNNYNYNNYNNNNNNYNNYNNYNYYYNYNYNYYYYYYY","YNNNYNNYNYYNYYYNNNYNYYYYNNNNYNYYYNYYNYYNYYYNNNYNN"},
+        new string[4]{"YYYYYYYYYNYYNYNYNNYNNYNYNNYNNNNNYNNNYNNYNYYYNYNNN","NNNYNNYNYYNYYYNNNYNYYYYNNNNYNYYYNYYNYYNYYYNNNYNNY","YYNYYNYNYNNYNNYNYNNYNNNNNYNNNYNNYNYYYNYNYNYYYYYYY","YNNNYNNYNYYNYYYNNNYNYYYYNNNNYNYYYNYYNYYNYYYNNNYNN"},
         new string[4]{"YYYYYYYNYYYNNNYYNNNNNNNNNYYYNYYNNYYNYYNNNYYYYYNNN","NNYNYNYNNYNYYYNYYYNNYYNNNNNYNNYYNNYNNNYYYYNNNNYNY","NYYYNNNYYNNNYNNNNNYYYNYYNNYYNYYNNNYYYYYNNNYYYYYYY","YNNYNYNYNNYNYYYNYYYNNYYNNNNNYNNYYNNYNNNYYYYNNNNYN"}
     };
     private int[] _currentPositions = new int[3];
     private bool _isInsideMaze;
     private int _currentMaze;
     private static readonly string[] _dirNames = new string[4] { "UP", "RIGHT", "DOWN", "LEFT" };
+    private int[] _mazeOrder = new int[3];
 
     private void Start()
     {
@@ -39,6 +40,7 @@ public class TripleTraversalScript : MonoBehaviour
             ArrowBtnSels[i].OnInteract += ArrowBtnPress(i);
         MiddleBtnSel.OnInteract += MiddleBtnPress;
 
+        _mazeOrder = Enumerable.Range(0, 3).ToArray().Shuffle();
         tryAgain:
         for (int i = 0; i < _currentPositions.Length; i++)
             _currentPositions[i] = Rnd.Range(0, 49);
@@ -61,10 +63,10 @@ public class TripleTraversalScript : MonoBehaviour
             Audio.PlaySoundAtTransform("Move", transform);
             if (_isInsideMaze)
             {
-                if (_walls[_currentMaze][dir].Substring(_currentPositions[_currentMaze], 1) == "Y")
+                if (_walls[_mazeOrder[_currentMaze]][dir].Substring(_currentPositions[_mazeOrder[_currentMaze]], 1) == "Y")
                 {
                     Module.HandleStrike();
-                    Debug.LogFormat("[Triple Traversal #{0}] While in Maze {1}, you attempted to travel {2} from {3}, but there was a wall. Strike.", _moduleId, "ABC"[_currentMaze], _dirNames[dir], GetCoord(_currentPositions[_currentMaze]));
+                    Debug.LogFormat("[Triple Traversal #{0}] While in Maze {1}, you attempted to travel {2} from {3}, but there was a wall. Strike.", _moduleId, "ABC"[_mazeOrder[_currentMaze]], _dirNames[dir], GetCoord(_currentPositions[_mazeOrder[_currentMaze]]));
                     _isInsideMaze = false;
                     ScreenText.text = "-";
                     _currentMaze = 0;
@@ -91,15 +93,15 @@ public class TripleTraversalScript : MonoBehaviour
         if (!_isInsideMaze)
         {
             _isInsideMaze = true;
-            ScreenText.text = "A";
+            ScreenText.text = "ABC"[_mazeOrder[_currentMaze]].ToString();
             Audio.PlaySoundAtTransform("Move", transform);
-            Debug.LogFormat("[Triple Traversal #{0}] Started maze movement. Entering Maze A. Current positions: {1}.", _moduleId, _currentPositions.Select(c => GetCoord(c)).Join(", "));
+            Debug.LogFormat("[Triple Traversal #{0}] Started maze movement. Entering Maze {2}. Current positions: {1}.", _moduleId, _currentPositions.Select(c => GetCoord(c)).Join(", "), "ABC"[_mazeOrder[_currentMaze]]);
         }
         else
         {
-            if (_currentPositions[_currentMaze] == 24)
+            if (_currentPositions[_mazeOrder[_currentMaze]] == 24)
             {
-                Debug.LogFormat("[Triple Traversal #{0}] Pressed the middle button at the center cell of Maze {1}.", _moduleId, "ABC"[_currentMaze]);
+                Debug.LogFormat("[Triple Traversal #{0}] Pressed the middle button at the center cell of Maze {1}.", _moduleId, "ABC"[_mazeOrder[_currentMaze]]);
                 _currentMaze++;
                 if (_currentMaze == 3)
                 {
@@ -113,8 +115,8 @@ public class TripleTraversalScript : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogFormat("[Triple Traversal #{0}] Entering Maze {1}. Current positions: {2}.", _moduleId, _currentMaze + 1, _currentPositions.Select(c => GetCoord(c)).Join(", "));
-                    ScreenText.text = "ABC"[_currentMaze].ToString();
+                    Debug.LogFormat("[Triple Traversal #{0}] Entering Maze {1}. Current positions: {2}.", _moduleId, "ABC"[_mazeOrder[_currentMaze]], _currentPositions.Select(c => GetCoord(c)).Join(", "));
+                    ScreenText.text = "ABC"[_mazeOrder[_currentMaze]].ToString();
                     Audio.PlaySoundAtTransform("Correct", transform);
                 }
             }
@@ -123,7 +125,7 @@ public class TripleTraversalScript : MonoBehaviour
                 Module.HandleStrike();
                 _isInsideMaze = false;
                 ScreenText.text = "-";
-                Debug.LogFormat("[Triple Traversal #{0}] Pressed the middle button at {1} of Maze {2} instead of the center cell. Strike.", _moduleId, GetCoord(_currentPositions[_currentMaze]), "ABC"[_currentMaze]);
+                Debug.LogFormat("[Triple Traversal #{0}] Pressed the middle button at {1} of Maze {2} instead of the center cell. Strike.", _moduleId, GetCoord(_currentPositions[_currentMaze]), "ABC"[_mazeOrder[_currentMaze]]);
                 _currentMaze = 0;
             }
         }
@@ -198,5 +200,42 @@ public class TripleTraversalScript : MonoBehaviour
             yield return new WaitForSeconds(0.1f);
         }
         yield break;
+    }
+
+    private static readonly string[][] _autoSolvePaths = new string[3][]
+    {
+        new string[49] { "drdrrdm", "ldrdrrdm", "drddm", "rrddldlm", "rddldlm", "ddldlm", "ddlldlm", "rdrrdm", "drrdm", "rddm", "ddm", "lddm", "dldlm", "dlldlm", "urdrrdm", "rrdm", "rdm", "dm", "dlm", "ldlm", "lldlm", "rrrm", "rrm", "rm", "m", "lm", "dllum", "ldllum", "ddrruruum", "lddrruruum", "llddrruruum", "um", "lum", "llum", "uldllum", "drruruum", "ulddrruruum", "ruum", "uum", "rullum", "ullum", "uuldllum", "rruruum", "ruruum", "uruum", "uuum", "urullum", "ruuuldllum", "uuuldllum" },
+        new string[49] { "rrddrdm", "rddrdm", "ddrdm", "lddrdm", "rddldlm", "ddldlm", "lddldlm", "drrrdm", "ldrrrdm", "drdm", "ddm", "lddm", "dldlm", "ddlllm", "rrrdm", "rrdm", "rdm", "dm", "dlm", "ldlm", "dlllm", "druurrdm", "urrdm", "rm", "m", "lm", "llm", "lllm", "ruurrdm", "uurrdm", "urm", "um", "rullm", "ullm", "ulllm", "uruurrdm", "luruurrdm", "uurm", "uum", "luum", "uullm", "dlluluum", "rruuurm", "ruuurm", "uuurm", "luuurm", "uluum", "luluum", "lluluum" },
+        new string[49] { "drrddrm", "ldrrddrm", "lldrrddrm", "rdlddm", "dlddm", "rddllulddm", "ddllulddm", "rrddrm", "rddrm", "ddrm", "ddm", "lddm", "urddllulddm", "dllulddm", "rdrrm", "drrm", "drm", "dm", "ulddm", "lulddm", "llulddm", "urdrrm", "rrm", "rm", "m", "lm", "llm", "lllm", "uurdrrm", "luurdrrm", "lluurdrrm", "um", "ulm", "lulm", "llulm", "rrruum", "rruum", "ruum", "uum", "uulm", "ululm", "dluululm", "rrrruuulm", "rrruuulm", "rruuulm", "ruuulm", "uuulm", "uululm", "luululm" }
+    };
+
+    private IEnumerator TwitchHandleForcedSolve()
+    {
+        if (!_isInsideMaze)
+        {
+            MiddleBtnSel.OnInteract();
+            yield return true;
+            yield return new WaitForSeconds(0.1f);
+        }
+        for (int st = _currentMaze; st < 3; st++)
+        {
+            var path = _autoSolvePaths[_mazeOrder[_currentMaze]][_currentPositions[_mazeOrder[_currentMaze]]];
+            for (int pNum = 0; pNum < path.Length; pNum++)
+            {
+                var c = path[pNum].ToString();
+                if (c == "n" || c == "u")
+                    ArrowBtnSels[0].OnInteract();
+                else if (c == "e" || c == "r")
+                    ArrowBtnSels[1].OnInteract();
+                else if (c == "s" || c == "d")
+                    ArrowBtnSels[2].OnInteract();
+                else if (c == "w" || c == "l")
+                    ArrowBtnSels[3].OnInteract();
+                else if (c == "m" || c == "c")
+                    MiddleBtnSel.OnInteract();
+                yield return true;
+                yield return new WaitForSeconds(0.1f);
+            }
+        }
     }
 }
