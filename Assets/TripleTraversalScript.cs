@@ -55,7 +55,6 @@ public class TripleTraversalScript : MonoBehaviour
     {
         return delegate ()
         {
-            Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, ArrowBtnSels[dir].transform);
             ArrowBtnSels[dir].AddInteractionPunch(0.5f);
             if (_moduleSolved)
                 return false;
