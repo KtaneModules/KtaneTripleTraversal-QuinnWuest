@@ -85,7 +85,6 @@ public class TripleTraversalScript : MonoBehaviour
 
     private bool MiddleBtnPress()
     {
-        Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, MiddleBtnSel.transform);
         MiddleBtnSel.AddInteractionPunch(0.5f);
         if (_moduleSolved)
             return false;
