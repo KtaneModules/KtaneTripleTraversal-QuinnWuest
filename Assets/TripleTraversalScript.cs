@@ -212,28 +212,9 @@ public class TripleTraversalScript : MonoBehaviour
         if (!_isInsideMaze)
         {
             MiddleBtnSel.OnInteract();
-            yield return true;
             yield return new WaitForSeconds(0.1f);
         }
         for (int st = _currentMaze; st < 3; st++)
-        {
-            var path = _autoSolvePaths[_mazeOrder[_currentMaze]][_currentPositions[_mazeOrder[_currentMaze]]];
-            for (int pNum = 0; pNum < path.Length; pNum++)
-            {
-                var c = path[pNum].ToString();
-                if (c == "n" || c == "u")
-                    ArrowBtnSels[0].OnInteract();
-                else if (c == "e" || c == "r")
-                    ArrowBtnSels[1].OnInteract();
-                else if (c == "s" || c == "d")
-                    ArrowBtnSels[2].OnInteract();
-                else if (c == "w" || c == "l")
-                    ArrowBtnSels[3].OnInteract();
-                else if (c == "m" || c == "c")
-                    MiddleBtnSel.OnInteract();
-                yield return true;
-                yield return new WaitForSeconds(0.1f);
-            }
-        }
+            yield return ProcessTwitchCommand(_autoSolvePaths[_mazeOrder[_currentMaze]][_currentPositions[_mazeOrder[_currentMaze]]]);
     }
 }
