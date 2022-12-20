@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
-using Rnd = UnityEngine.Random;
 
 public class TripleTraversalScript : MonoBehaviour
 {
@@ -13,7 +12,6 @@ public class TripleTraversalScript : MonoBehaviour
     public KMSelectable[] ArrowBtnSels;
     public KMSelectable MiddleBtnSel;
     public TextMesh ScreenText;
-
     public GameObject[] WallDisplayObjs;
     public Material[] WallDisplayMats;
 
@@ -27,10 +25,10 @@ public class TripleTraversalScript : MonoBehaviour
         new string[4]{"YYYYYYYYYNYYNYNYNNYNNYNYNNYNNNNNYNNNYNNYNYYYNYNYN","NNNYNNYNYYNYYYNNNYNYYYYNNNNYNYYYNYYNYYNYYYNNNYNNY","YYNYYNYNYNNYNNYNYNNYNNNNNYNNNYNNYNYYYNYNYNYYYYYYY","YNNNYNNYNYYNYYYNNNYNYYYYNNNNYNYYYNYYNYYNYYYNNNYNN"},
         new string[4]{"YYYYYYYNYYYNNNYYNNNYNNNNNYYYNYYNNYYNYYNNNYYYYYNNN","NNYNYNYNNYNYYYNYYYNNYYNNNNNYNNYYNNYNNNYYYYNNNNYNY","NYYYNNNYYNNNYNNNNNYYYNYYNNYYNYYNNNYYYYYNNNYYYYYYY","YNNYNYNYNNYNYYYNYYYNNYYNNNNNYNNYYNNYNNNYYYYNNNNYN"}
     };
+    private static readonly string[] _dirNames = new string[4] { "UP", "RIGHT", "DOWN", "LEFT" };
     private int[] _currentPositions = new int[3];
     private bool _isInsideMaze;
     private int _currentMaze;
-    private static readonly string[] _dirNames = new string[4] { "UP", "RIGHT", "DOWN", "LEFT" };
     private int[] _mazeOrder = new int[3];
 
     private void Start()
@@ -41,13 +39,10 @@ public class TripleTraversalScript : MonoBehaviour
         MiddleBtnSel.OnInteract += MiddleBtnPress;
 
         _mazeOrder = Enumerable.Range(0, 3).ToArray().Shuffle();
-        tryAgain:
-        for (int i = 0; i < _currentPositions.Length; i++)
-            _currentPositions[i] = Rnd.Range(0, 49);
-        if (_currentPositions.Distinct().Count() != 3)
-            goto tryAgain;
+        _currentPositions = Enumerable.Range(0, 49).ToArray().Shuffle().Take(3).ToArray();
 
         Debug.LogFormat("[Triple Traversal #{0}] Initial positions: {1}", _moduleId, _currentPositions.Select(c => GetCoord(c)).Join(", "));
+        Debug.LogFormat("[Triple Traversal #{0}] Order of mazes: {1}.", _moduleId, _mazeOrder.Select(i => "ABC"[i]).ToArray().Join(", "));
         ShowWalls();
     }
 
@@ -58,27 +53,17 @@ public class TripleTraversalScript : MonoBehaviour
             ArrowBtnSels[dir].AddInteractionPunch(0.5f);
             if (_moduleSolved)
                 return false;
-            //Debug.LogFormat("[Triple Traversal #{0}] Pressed {1}.", _moduleId, dir);
             Audio.PlaySoundAtTransform("Move", transform);
-            if (_isInsideMaze)
+            if (_isInsideMaze && _walls[_mazeOrder[_currentMaze]][dir].Substring(_currentPositions[_mazeOrder[_currentMaze]], 1) == "Y")
             {
-                if (_walls[_mazeOrder[_currentMaze]][dir].Substring(_currentPositions[_mazeOrder[_currentMaze]], 1) == "Y")
-                {
-                    Module.HandleStrike();
-                    Debug.LogFormat("[Triple Traversal #{0}] While in Maze {1}, you attempted to travel {2} from {3}, but there was a wall. Strike.", _moduleId, "ABC"[_mazeOrder[_currentMaze]], _dirNames[dir], GetCoord(_currentPositions[_mazeOrder[_currentMaze]]));
-                    _isInsideMaze = false;
-                    ScreenText.text = "-";
-                    _currentMaze = 0;
-                }
-                else
-                {
-                    MoveInMaze(dir);
-                }
+                Module.HandleStrike();
+                Debug.LogFormat("[Triple Traversal #{0}] While in Maze {1}, you attempted to travel {2} from {3}, but there was a wall. Strike.", _moduleId, "ABC"[_mazeOrder[_currentMaze]], _dirNames[dir], GetCoord(_currentPositions[_mazeOrder[_currentMaze]]));
+                _isInsideMaze = false;
+                ScreenText.text = "-";
+                _currentMaze = 0;
             }
             else
-            {
                 MoveInMaze(dir);
-            }
             return false;
         };
     }
@@ -94,39 +79,33 @@ public class TripleTraversalScript : MonoBehaviour
             ScreenText.text = "ABC"[_mazeOrder[_currentMaze]].ToString();
             Audio.PlaySoundAtTransform("Move", transform);
             Debug.LogFormat("[Triple Traversal #{0}] Started maze movement. Entering Maze {2}. Current positions: {1}.", _moduleId, _currentPositions.Select(c => GetCoord(c)).Join(", "), "ABC"[_mazeOrder[_currentMaze]]);
+            return false;
         }
-        else
+        if (_currentPositions[_mazeOrder[_currentMaze]] == 24)
         {
-            if (_currentPositions[_mazeOrder[_currentMaze]] == 24)
+            Debug.LogFormat("[Triple Traversal #{0}] Pressed the middle button at the center cell of Maze {1}.", _moduleId, "ABC"[_mazeOrder[_currentMaze]]);
+            _currentMaze++;
+            if (_currentMaze == 3)
             {
-                Debug.LogFormat("[Triple Traversal #{0}] Pressed the middle button at the center cell of Maze {1}.", _moduleId, "ABC"[_mazeOrder[_currentMaze]]);
-                _currentMaze++;
-                if (_currentMaze == 3)
-                {
-                    Debug.LogFormat("[Triple Traversal #{0}] Module solved.", _moduleSolved);
-                    Audio.PlaySoundAtTransform("Solve", transform);
-                    Module.HandlePass();
-                    _moduleSolved = true;
-                    ScreenText.text = "-";
-                    for (int i = 0; i < 4; i++)
-                        WallDisplayObjs[i].GetComponent<MeshRenderer>().material = WallDisplayMats[0];
-                }
-                else
-                {
-                    Debug.LogFormat("[Triple Traversal #{0}] Entering Maze {1}. Current positions: {2}.", _moduleId, "ABC"[_mazeOrder[_currentMaze]], _currentPositions.Select(c => GetCoord(c)).Join(", "));
-                    ScreenText.text = "ABC"[_mazeOrder[_currentMaze]].ToString();
-                    Audio.PlaySoundAtTransform("Correct", transform);
-                }
-            }
-            else
-            {
-                Module.HandleStrike();
-                _isInsideMaze = false;
+                Debug.LogFormat("[Triple Traversal #{0}] Module solved.", _moduleSolved);
+                Audio.PlaySoundAtTransform("Solve", transform);
+                Module.HandlePass();
+                _moduleSolved = true;
                 ScreenText.text = "-";
-                Debug.LogFormat("[Triple Traversal #{0}] Pressed the middle button at {1} of Maze {2} instead of the center cell. Strike.", _moduleId, GetCoord(_currentPositions[_currentMaze]), "ABC"[_mazeOrder[_currentMaze]]);
-                _currentMaze = 0;
+                for (int i = 0; i < 4; i++)
+                    WallDisplayObjs[i].GetComponent<MeshRenderer>().material = WallDisplayMats[0];
+                return false;
             }
+            Debug.LogFormat("[Triple Traversal #{0}] Entering Maze {1}. Current positions: {2}.", _moduleId, "ABC"[_mazeOrder[_currentMaze]], _currentPositions.Select(c => GetCoord(c)).Join(", "));
+            ScreenText.text = "ABC"[_mazeOrder[_currentMaze]].ToString();
+            Audio.PlaySoundAtTransform("Correct", transform);
+            return false;
         }
+        Module.HandleStrike();
+        _isInsideMaze = false;
+        ScreenText.text = "-";
+        Debug.LogFormat("[Triple Traversal #{0}] Pressed the middle button at {1} of Maze {2} instead of the center cell. Strike.", _moduleId, GetCoord(_currentPositions[_currentMaze]), "ABC"[_mazeOrder[_currentMaze]]);
+        _currentMaze = 0;
         return false;
     }
 
@@ -151,18 +130,8 @@ public class TripleTraversalScript : MonoBehaviour
 
     private void ShowWalls()
     {
-        var wallDisplays = new int[4];
-        for (int wallIx = 0; wallIx < 4; wallIx++)
-        {
-            var count = 0;
-            for (int mazeNum = 0; mazeNum < 3; mazeNum++)
-            {
-                if (_walls[mazeNum][wallIx].Substring(_currentPositions[mazeNum], 1) == "Y")
-                    count++;
-            }
-            wallDisplays[wallIx] = count;
-            WallDisplayObjs[wallIx].GetComponent<MeshRenderer>().material = WallDisplayMats[wallDisplays[wallIx]];
-        }
+        for (int wall = 0; wall < 4; wall++)
+            WallDisplayObjs[wall].GetComponent<MeshRenderer>().material = WallDisplayMats[Enumerable.Range(0, 4).Select(i => Enumerable.Range(0, 3).Where(j => _walls[j][i].Substring(_currentPositions[j], 1) == "Y").Count()).ToArray()[wall]];
     }
 
     private string GetCoord(int c)
@@ -180,9 +149,9 @@ public class TripleTraversalScript : MonoBehaviour
         if (!m.Success)
             yield break;
         yield return null;
-        foreach (var ch in m.Groups[1].Value)
+        var chars = m.Groups[1].Value.Select(i => i.ToString().ToLowerInvariant());
+        foreach (var c in chars)
         {
-            var c = ch.ToString().ToLowerInvariant();
             if (c == " " || c == ";" || c == ",")
                 continue;
             if (c == "n" || c == "u")
@@ -200,12 +169,19 @@ public class TripleTraversalScript : MonoBehaviour
         yield break;
     }
 
-    private static readonly string[][] _autoSolvePaths = new string[3][]
+    struct QueueItem
     {
-        new string[49] { "drdrrdm", "ldrdrrdm", "drddm", "rrddldlm", "rddldlm", "ddldlm", "ddlldlm", "rdrrdm", "drrdm", "rddm", "ddm", "lddm", "dldlm", "dlldlm", "urdrrdm", "rrdm", "rdm", "dm", "dlm", "ldlm", "lldlm", "rrrm", "rrm", "rm", "m", "lm", "dllum", "ldllum", "ddrruruum", "lddrruruum", "llddrruruum", "um", "lum", "llum", "uldllum", "drruruum", "ulddrruruum", "ruum", "uum", "rullum", "ullum", "uuldllum", "rruruum", "ruruum", "uruum", "uuum", "urullum", "ruuuldllum", "uuuldllum" },
-        new string[49] { "rrddrdm", "rddrdm", "ddrdm", "lddrdm", "rddldlm", "ddldlm", "lddldlm", "drrrdm", "ldrrrdm", "drdm", "ddm", "lddm", "dldlm", "ddlllm", "rrrdm", "rrdm", "rdm", "dm", "dlm", "ldlm", "dlllm", "druurrdm", "urrdm", "rm", "m", "lm", "llm", "lllm", "ruurrdm", "uurrdm", "urm", "um", "rullm", "ullm", "ulllm", "uruurrdm", "luruurrdm", "uurm", "uum", "luum", "uullm", "dlluluum", "rruuurm", "ruuurm", "uuurm", "luuurm", "uluum", "luluum", "lluluum" },
-        new string[49] { "drrddrm", "ldrrddrm", "lldrrddrm", "rdlddm", "dlddm", "rddllulddm", "ddllulddm", "rrddrm", "rddrm", "ddrm", "ddm", "lddm", "urddllulddm", "dllulddm", "rdrrm", "drrm", "drm", "dm", "ulddm", "lulddm", "llulddm", "urdrrm", "rrm", "rm", "m", "lm", "llm", "lllm", "uurdrrm", "luurdrrm", "lluurdrrm", "um", "ulm", "lulm", "llulm", "rrruum", "rruum", "ruum", "uum", "uulm", "ululm", "dluululm", "rrrruuulm", "rrruuulm", "rruuulm", "ruuulm", "uuulm", "uululm", "luululm" }
-    };
+        public int Cell;
+        public int Parent;
+        public int Direction;
+
+        public QueueItem(int cell, int parent, int direction)
+        {
+            Cell = cell;
+            Parent = parent;
+            Direction = direction;
+        }
+    }
 
     private IEnumerator TwitchHandleForcedSolve()
     {
@@ -215,6 +191,47 @@ public class TripleTraversalScript : MonoBehaviour
             yield return new WaitForSeconds(0.1f);
         }
         for (int st = _currentMaze; st < 3; st++)
-            yield return ProcessTwitchCommand(_autoSolvePaths[_mazeOrder[_currentMaze]][_currentPositions[_mazeOrder[_currentMaze]]]);
+        {
+            var cur = _currentPositions[_mazeOrder[st]];
+            var q = new Queue<QueueItem>();
+            var visited = new Dictionary<int, QueueItem>();
+            var sol = 24;
+            q.Enqueue(new QueueItem(cur, -1, 0));
+            while (q.Count > 0)
+            {
+                var qi = q.Dequeue();
+                if (visited.ContainsKey(qi.Cell))
+                    continue;
+                visited[qi.Cell] = qi;
+                if (qi.Cell == sol)
+                    break;
+                if (_walls[_mazeOrder[st]][0][qi.Cell] == 'N')
+                    q.Enqueue(new QueueItem(qi.Cell - 7, qi.Cell, 0));
+                if (_walls[_mazeOrder[st]][1][qi.Cell] == 'N')
+                    q.Enqueue(new QueueItem(qi.Cell + 1, qi.Cell, 1));
+                if (_walls[_mazeOrder[st]][2][qi.Cell] == 'N')
+                    q.Enqueue(new QueueItem(qi.Cell + 7, qi.Cell, 2));
+                if (_walls[_mazeOrder[st]][3][qi.Cell] == 'N')
+                    q.Enqueue(new QueueItem(qi.Cell - 1, qi.Cell, 3));
+            }
+            var r = sol;
+            var path = new List<int>(0);
+            while (true)
+            {
+                var nr = visited[r];
+                if (nr.Parent == -1)
+                    break;
+                path.Add(nr.Direction);
+                r = nr.Parent;
+            }
+            for (int i = path.Count - 1; i >= 0; i--)
+            {
+                ArrowBtnSels[path[i]].OnInteract();
+                yield return new WaitForSeconds(0.1f);
+            }
+            MiddleBtnSel.OnInteract();
+            if (!_moduleSolved)
+                yield return new WaitForSeconds(0.1f);
+        }
     }
 }
