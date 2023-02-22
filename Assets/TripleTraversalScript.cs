@@ -104,7 +104,7 @@ public class TripleTraversalScript : MonoBehaviour
         Module.HandleStrike();
         _isInsideMaze = false;
         ScreenText.text = "-";
-        Debug.LogFormat("[Triple Traversal #{0}] Pressed the middle button at {1} of Maze {2} instead of the center cell. Strike.", _moduleId, GetCoord(_currentPositions[_currentMaze]), "ABC"[_mazeOrder[_currentMaze]]);
+        Debug.LogFormat("[Triple Traversal #{0}] Pressed the middle button at {1} of Maze {2} instead of the center cell. Strike.", _moduleId, GetCoord(_currentPositions[_mazeOrder[_currentMaze]]), "ABC"[_mazeOrder[_currentMaze]]);
         _currentMaze = 0;
         return false;
     }
